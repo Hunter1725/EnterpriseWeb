@@ -26,6 +26,7 @@ namespace EnterpriseWeb.Controllers
 {
     public class IdeaController : Controller
     {
+        private string Layout = "_ViewAdmin";
         private readonly EnterpriseWebIdentityDbContext _context;
         private readonly UserManager<IdeaUser> _userManager;
         private NotificationSender _notificationSender;
@@ -39,6 +40,58 @@ namespace EnterpriseWeb.Controllers
             _userManager = userManager;
             _notificationSender = notificationSender;
             hostEnvironment = environment;
+        }
+        public IActionResult Blog()
+        {
+            return View();
+        }
+        public async Task<IActionResult> ViewIdea(string currentFilter, string searchString, int? pageNumber)
+        {
+            ViewBag.Layout = Layout;
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
+            }
+            ViewData["CurrentFilter"] = searchString;
+            var ideas = from m in _context.Idea.Include(i => i.ClosureDate)
+                                        .Include(i => i.Department).Include(i => i.Viewings) select m;
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                ideas = ideas.Where(s => s.Title.Contains(searchString));
+            }
+            int pageSize = 5;
+            return View(await PaginatedList<Idea>.CreateAsync(ideas.AsNoTracking(), pageNumber ?? 1, pageSize));
+        }
+        public IActionResult Chart()
+        {
+            ViewBag.Layout = Layout;
+            var data = _context.Rating.Include(s => s.Idea)
+                        .GroupBy(s => s.Idea.Title)
+                        .Select(g => new { Title = g.Key, RatingUp = g.Sum(s => s.RatingUp), RatingDown= g.Sum(s => s.RatingDown)})
+                        .ToList();
+
+            string[] labels = new string[data.Count];
+            string[] ratingdown = new string[data.Count];
+            string[] ratingup = new string[data.Count];
+
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                labels[i] = data[i].Title;
+                ratingdown[i] = data[i].RatingDown.ToString();
+                ratingup[i] = data[i].RatingUp.ToString();
+
+            }
+
+            ViewData["labels"] = string.Format("'{0}'", String.Join("','", labels));
+            ViewData["ratingdown"] = String.Join(",", ratingdown);
+            ViewData["ratingup"] = String.Join(",", ratingup);
+
+            return View(data);
         }
 
         //Download files
@@ -166,7 +219,8 @@ namespace EnterpriseWeb.Controllers
         // GET: Idea
         public async Task<IActionResult> Index()
         {
-            var enterpriseWebContext = _context.Idea.Include(i => i.ClosureDate).Include(i => i.Department);
+            var enterpriseWebContext = _context.Idea.Include(i => i.ClosureDate)
+                                        .Include(i => i.Department).Include(i => i.Viewings);
             return View(await enterpriseWebContext.ToListAsync());
         }
         public async Task<IActionResult> Filter(string currentFilter, string searchString, int? pageNumber)
@@ -209,25 +263,28 @@ namespace EnterpriseWeb.Controllers
         }
 
         // GET: Idea/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public async Task<IActionResult> Details(int id)
         {
             if (id == null)
             {
                 return NotFound();
             }
-
+            
+ 
             ViewData["UserID"] = new SelectList(_context.Set<IdentityUser>(), "Id", "Name");
 
             var idea = await _context.Idea
                 .Include(i => i.ClosureDate)
                 .Include(i => i.Department)
                 .Include(i => i.Comments)
+                .Include(i => i.Viewings)
                 .ThenInclude(i => i.IdeaUser)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (idea == null)
             {
                 return NotFound();
             }
+            await ViewingIdea(id);
 
             return View(idea);
         }
@@ -476,6 +533,7 @@ namespace EnterpriseWeb.Controllers
                 }
                 rating.SubmitionDate = DateTime.Now;
             }
+            await ViewingIdea(id);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
@@ -567,6 +625,29 @@ namespace EnterpriseWeb.Controllers
             }
             await _context.SaveChangesAsync();
             return RedirectToAction("Details", new { id = id });
+        }
+
+        public async Task ViewingIdea(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier); // replace with code to get the current user ID
+            var user = _userManager.Users.FirstOrDefault(u => u.Id == userId);
+            var idea = _context.Idea.FirstOrDefault(i => i.Id == id);
+
+            var viewing = await _context.Viewing.SingleOrDefaultAsync(r => r.IdeaId == id && r.UserId.Equals(userId));
+            if (viewing == null)
+            {
+                viewing = new Viewing
+                    {
+                        IdeaId = id,
+                        UserId = userId,
+                        IdeaUser = user,
+                        Count = 1,
+                        ViewDate = DateTime.Now
+                    };
+                    _context.Viewing.Add(viewing);
+                    await _context.SaveChangesAsync();
+            }
+
         }
 
     }

@@ -13,7 +13,7 @@ namespace EnterpriseWeb.Controllers
     public class CategoryController : Controller
     {
         private string Layout = "_ViewAdmin";
-        private string Layout1 = "_ViewAdmin1";
+
         private readonly EnterpriseWebIdentityDbContext _context;
 
         public CategoryController(EnterpriseWebIdentityDbContext context)
@@ -93,6 +93,7 @@ namespace EnterpriseWeb.Controllers
         // GET: Category/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            ViewBag.Layout = Layout;
             if (id == null)
             {
                 return NotFound();

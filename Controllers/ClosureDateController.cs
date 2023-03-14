@@ -12,6 +12,7 @@ namespace EnterpriseWeb.Controllers
 {
     public class ClosureDateController : Controller
     {
+        private string Layout = "_ViewAdmin";
         private readonly EnterpriseWebIdentityDbContext _context;
 
         public ClosureDateController(EnterpriseWebIdentityDbContext context)
@@ -22,6 +23,7 @@ namespace EnterpriseWeb.Controllers
         // GET: ClosureDate
         public async Task<IActionResult> Index()
         {
+            ViewBag.Layout = Layout;
             return View(await _context.ClosureDate.ToListAsync());
         }
 
@@ -46,6 +48,7 @@ namespace EnterpriseWeb.Controllers
         // GET: ClosureDate/Create
         public IActionResult Create()
         {
+            ViewBag.Layout = Layout;
             return View();
         }
 
@@ -68,6 +71,7 @@ namespace EnterpriseWeb.Controllers
         // GET: ClosureDate/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            ViewBag.Layout = Layout;
             if (id == null)
             {
                 return NotFound();

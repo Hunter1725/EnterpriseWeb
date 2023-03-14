@@ -11,6 +11,7 @@ namespace EnterpriseWeb.Controllers
 {
     public class DepartmentController : Controller
     {
+        private string Layout = "_ViewAdmin";
         private readonly EnterpriseWebIdentityDbContext _context;
 
         public DepartmentController(EnterpriseWebIdentityDbContext context)
@@ -19,11 +20,29 @@ namespace EnterpriseWeb.Controllers
         }
 
         // GET: Department
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string currentFilter, string searchString, int? pageNumber)
         {
-            var enterpriseWebContext = _context.Department.Include(d => d.QACoordinator);
-            return View(await enterpriseWebContext.ToListAsync());
+            ViewBag.Layout = Layout;
+            // var enterpriseWebContext = _context.Department.Include(d => d.QACoordinator);
+            // return View(await enterpriseWebContext.ToListAsync());
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
+            }
+            ViewData["CurrentFilter"] = searchString;
+            var department = from m in _context.Department.Include(d => d.QACoordinator) select m;
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                department = department.Where(s => s.Name.Contains(searchString));
+            }
+            int pageSize = 5;
+            return View(await PaginatedList<Department>.CreateAsync(department.AsNoTracking(), pageNumber ?? 1, pageSize));
         }
+
 
         // GET: Department/Details/5
         public async Task<IActionResult> Details(int? id)
@@ -47,6 +66,7 @@ namespace EnterpriseWeb.Controllers
         // GET: Department/Create
         public IActionResult Create()
         {
+            ViewBag.Layout = Layout;
             ViewData["QACoordinatorID"] = new SelectList(_context.Set<QACoordinator>(), "Id", "Id");
             return View();
         }
@@ -71,6 +91,7 @@ namespace EnterpriseWeb.Controllers
         // GET: Department/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            ViewBag.Layout = Layout;
             if (id == null)
             {
                 return NotFound();

@@ -11,6 +11,7 @@ namespace EnterpriseWeb.Controllers
 {
     public class QACoordinatorController : Controller
     {
+        private string Layout = "_ViewAdmin";
         private readonly EnterpriseWebIdentityDbContext _context;
 
         public QACoordinatorController(EnterpriseWebIdentityDbContext context)
@@ -19,11 +20,27 @@ namespace EnterpriseWeb.Controllers
         }
 
         // GET: QACoordinator
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string currentFilter, string searchString, int? pageNumber)
         {
-            return View(await _context.QACoordinator.ToListAsync());
-        }
+            ViewBag.Layout = Layout;
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
+            }
+            ViewData["CurrentFilter"] = searchString;
+            var qa = from m in _context.QACoordinator select m;
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                qa = qa.Where(s => s.Name.Contains(searchString));
+            }
+            int pageSize = 5;
+            return View(await PaginatedList<QACoordinator>.CreateAsync(qa.AsNoTracking(), pageNumber ?? 1, pageSize));
 
+        }
         // GET: QACoordinator/Details/5
         public async Task<IActionResult> Details(int? id)
         {
@@ -45,6 +62,7 @@ namespace EnterpriseWeb.Controllers
         // GET: QACoordinator/Create
         public IActionResult Create()
         {
+            ViewBag.Layout = Layout;
             return View();
         }
 
@@ -67,6 +85,7 @@ namespace EnterpriseWeb.Controllers
         // GET: QACoordinator/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            ViewBag.Layout = Layout;
             if (id == null)
             {
                 return NotFound();
