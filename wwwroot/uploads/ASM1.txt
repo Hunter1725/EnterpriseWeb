@@ -1,0 +1,19 @@
+@startuml
+
+class Animal{
+  + name : string
+  + favouriteFood: string
+  + MyInfo() : string
+}
+
+class Lion{
+  + MyInfo() : string
+}
+
+class Cat{
+  + MyInfo() : string
+}
+
+Animal <|-- Lion
+Animal <|-- Cat
+@enduml
